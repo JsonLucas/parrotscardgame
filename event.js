@@ -1,60 +1,138 @@
-//import ('functions.js')
+
 let indexImageCard = [];
 let selectedIndexCard = [];
 let selectedIndexImageCard = [];
 let prohibitedCards = [];
 let numRounds = 0;
+let possibleMoves = 0;
+let previousCardActive = false;
 
-let numCards = prompt('digite com quantas cartas deseja jogar.');
-while((numCards < 4) || (numCards > 14) || (numCards%2 != 0)){
-    numCards = prompt('digite um numero de cartas valido.');
+let numCards = parseInt(prompt('digite com quantas cartas deseja jogar.'));
+while((numCards < 4) || (numCards > 14) || (numCards%2 !== 0)){
+    numCards = parseInt(prompt('digite um numero de cartas valido.'));
+}
+
+const containerBody = document.querySelector('.container-body');
+let bodyRow;
+if(numCards >= 8){
+    containerBody.innerHTML += `<div class='row-cards'></div>
+    <div class='row-cards'></div>`;
+    bodyRow = document.querySelectorAll('.row-cards');
+}else{
+    containerBody.innerHTML += `<div class='row-cards'></div>`;
+    bodyRow = document.querySelector('.row-cards');
 }
 
 cardsGenerator(numCards);
+calcMoves();
 
-const cards = document.querySelectorAll('div.cards');
-const frontCard = document.querySelectorAll('div.front');
-const backCard = document.querySelectorAll('div.back');
+while(possibleMoves === 0){
+    while(indexImageCard.length > 0){
+        indexImageCard.pop();
+    }
+    bodyRow.innerHTML = '';
+    cardsGenerator(numCards);
+    calcMoves();
+}
+
+const cards = document.querySelectorAll('.cards');
+const frontCard = document.querySelectorAll('.front');
+const backCard = document.querySelectorAll('.back');
 
 clickEvents();
 
-let contTempo = 0;
-setInterval(function (){ document.querySelector('.tempo-de-jogo > span').innerHTML = contTempo++ }, 1000);
+let contTime = 0;
+let gameTime = setInterval(function (){ document.querySelector('.tempo-de-jogo > span').innerHTML = contTime++ }, 1000);
 
 function cardsGenerator(numCards){
-    const bodyRow = document.querySelector('.row-cards');
     for(let i = 0; i < numCards; i++){
-        indexImageCard.push(shuffle());
-        bodyRow.innerHTML += `<div class='cards' id='card-${i}'>
-            <div class='single-card front'><img src='images/front.png' alt='Imagem não carregada.'></div>
-            <div class='single-card back'><img src='images/back-${indexImageCard[i]}.gif' alt='Imagem não carregada.'></div>
-        </div>`
+        indexImageCard.push(shuffleCards());
+        if(numCards >= 8){
+            if(i < numCards/2){
+                bodyRow[0].innerHTML += `<div class='cards' id='card-${i}' data-identifier='card'>
+                    <div class='single-card back' data-identifier='back-face'><img src='images/back.png' alt='Imagem não carregada.'></div>
+                    <div class='single-card front' data-identifier='front-face'><img src='images/front-${indexImageCard[i]}.gif' alt='Imagem não carregada.'></div>
+                </div>`
+            }else{
+                bodyRow[1].innerHTML += `<div class='cards' id='card-${i}' data-identifier='card'>
+                    <div class='single-card back' data-identifier='back-face'><img src='images/back.png' alt='Imagem não carregada.'></div>
+                    <div class='single-card front' data-identifier='front-face'><img src='images/front-${indexImageCard[i]}.gif' alt='Imagem não carregada.'></div>
+                </div>`
+            }
+        }else{
+            bodyRow.innerHTML += `<div class='cards' id='card-${i}' data-identifier='card'>
+                <div class='single-card back' data-identifier='back-face'><img src='images/back.png' alt='Imagem não carregada.'></div>
+                <div class='single-card front' data-identifier='front-face'><img src='images/front-${indexImageCard[i]}.gif' alt='Imagem não carregada.'></div>
+            </div>`
+        }
     }
 }
 
 function clickEvents(){
-    for(let i=0; i < numCards; i++){
+    for(let i = 0; i < numCards; i++){
         cards[i].addEventListener('click', selecionar);
     }
 }
 
-function shuffle(){
+function shuffleCards(){
     return Math.floor((Math.random()*7)+1);
 }
 
 function selecionar(){
-    const indexCard = parseInt(this.id[this.id.length - 1]);
-    if(!frontCard[indexCard].classList.contains('desvira-carta')){
+    const paramIndex = this.id.split('-');
+    const indexCard = parseInt(paramIndex[paramIndex.length - 1]);
+    numRounds++;
+    if(!frontCard[indexCard].classList.contains('vira-carta')){
         if(!isProhibited(indexCard)){
-            frontCard[indexCard].classList.add('desvira-carta');
-            backCard[indexCard].classList.add('vira-carta');
+            frontCard[indexCard].classList.add('vira-carta');
+            backCard[indexCard].classList.add('desvira-carta');
             selectedCard(indexImageCard[indexCard], indexCard);
         }
     }else{
         if(!isProhibited(indexCard)){
-            frontCard[indexCard].classList.remove('desvira-carta');
-            backCard[indexCard].classList.remove('vira-carta');
+            frontCard[indexCard].classList.remove('vira-carta');
+            backCard[indexCard].classList.remove('desvira-carta');
+            previousCardActive = true;
         }
+    }
+}
+
+function selectedCard(indexImage, indexCard){
+    if(selectedIndexCard.length !== 0){
+        selectedIndexImageCard.push(indexImage);
+        selectedIndexCard.push(indexCard);
+        if(selectedIndexCard.length === 2){
+            if(previousCardActive){
+                selectedIndexCard[0] = selectedIndexCard[1];
+                selectedIndexImageCard[0] = selectedIndexImageCard[1];
+                selectedIndexCard.pop();
+                selectedIndexImageCard.pop();
+                previousCardActive = false;
+            }else{
+                if(selectedIndexImageCard[0] === selectedIndexImageCard[1]){
+                    for(let i = 0; i < selectedIndexCard.length; i++){
+                        prohibitedCards.push(selectedIndexCard[i]);
+                        cards[selectedIndexCard[i]].classList.add('prohibited');
+                        indexImageCard[selectedIndexCard[i]] = 0; //unset image
+                    }
+                    calcMoves();
+                    unsetSelected();
+                }else{
+                    unsetSelected();
+                    setTimeout(function(){
+                        for(let i = 0; i < cards.length; i++){
+                            if(!cards[i].classList.contains('prohibited')){
+                                frontCard[i].classList.remove('vira-carta');
+                                backCard[i].classList.remove('desvira-carta');
+                            } 
+                        }
+                    }, 1000);
+                }
+            }
+        }
+    }else{
+        selectedIndexImageCard.push(indexImage);
+        selectedIndexCard.push(indexCard);
     }
 }
 
@@ -72,42 +150,6 @@ function isProhibited(indexCard){
     }
 }
 
-function selectedCard(indexImage, indexCard){
-    selectedIndexImageCard.push(indexImage);
-    selectedIndexCard.push(indexCard);
-    numRounds++;
-    //console.log('indexCard = '+indexCard+'\nindexImage = '+indexImage);
-    if(numRounds%2 === 0){
-        if(selectedIndexImageCard[0] === selectedIndexImageCard[1]){
-            console.log('\niguais');
-            for(let i = 0; i < selectedIndexCard.length; i++){
-                prohibitedCards.push(selectedIndexCard[i]);
-                cards[selectedIndexCard[i]].classList.add('prohibited')
-                console.log(cards[selectedIndexCard[i]]);
-            }
-            //console.log(prohibitedCards);
-            //console.log(selectedIndexCard);
-            unsetSelected();
-            //console.log(selectedIndexCard);
-        }else{
-            console.log('\ndiferentes');
-            console.log(selectedIndexCard);
-            setTimeout(function(){
-                for(let i = 0; i < cards.length; i++){
-                    if(!cards[i].classList.contains('prohibited')){
-                        frontCard[i].classList.remove('desvira-carta');
-                        backCard[i].classList.remove('vira-carta');
-                        console.log(cards[i]);
-                    } 
-                    //console.log(cards[i]);
-                }
-            }, 1000);
-            unsetSelected();
-        }
-        //console.log('\ncartoes proibidos: '+prohibitedCards.length);
-    }
-}
-
 function unsetSelected(){
     while(selectedIndexCard.length > 0){
         selectedIndexCard.pop();
@@ -116,18 +158,48 @@ function unsetSelected(){
 }
 
 function newGame(){
-    let verificator = 0;
-    for(let i=0; i < cards.length; i++){
-        if(cards[i].classList.contains('prohibited')){
-            verificator++;
-        }
-    }
-    if(verificator === cards.length){
-        const option = confirm(`===Jogo encerrado===\nVocê ganhou com ${numRounds} jogadas.\nDeseja jogar novamente?`);
+    if(possibleMoves === 0){
+        clearInterval(gameTime);
+        const option = confirm(`===Jogo encerrado===\nVocê ganhou com ${numRounds} jogadas e ${contTime} segundos de jogo.
+        \nDeseja jogar novamente?`);
         if(option){
-            window.location.reload;
+            window.location.reload();
         }else{
             alert('obrigado por jogar!');
+            for(let i = 0; i < indexImageCard.length; i++){
+                if(indexImageCard[i] !== 0){
+                    cards[i].removeEventListener('click', selecionar);
+                    cards[i].classList.add('prohibited');
+                }
+            }
+        }
+    }
+}
+
+function calcMoves(){
+    remainingMoves();
+    if(possibleMoves > 0){
+        if(possibleMoves%2 === 0){
+            possibleMoves /= 2;
+        }else{
+            possibleMoves = Math.floor(possibleMoves/2);
+        }
+    }else{
+        setTimeout(newGame, 1000);
+    }
+}
+
+function remainingMoves(){
+    possibleMoves = 0;
+    for(let i = 0; i < indexImageCard.length; i++){
+        for(let j = 0; j < indexImageCard.length; j++){
+            if(i !== j){
+                if(indexImageCard[i] !== 0){
+                    if(indexImageCard[i] === indexImageCard[j]){
+                        possibleMoves++;
+                    }
+                }
+            }
         }
     }
 }
