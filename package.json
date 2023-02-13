@@ -1,8 +1,9 @@
 {
-  "name": "parrotscardgame",
+  "name": "parrotcardgame",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+	"dev": "ng serve --port 3000",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
